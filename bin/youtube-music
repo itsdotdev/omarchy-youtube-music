@@ -22,17 +22,32 @@ ipc() {
   printf '%s\n' "$1" | socat -T 0.4 - "UNIX-CONNECT:$socket" 2>/dev/null
 }
 
+kill_old_mpv() {
+  if [[ -f "$pid_file" ]]; then
+    local old_pid
+    old_pid="$(cat "$pid_file" 2>/dev/null || true)"
+    if [[ -n "$old_pid" ]] && kill -0 "$old_pid" 2>/dev/null; then
+      ipc '{"command":["quit"]}' >/dev/null 2>&1 || true
+      for _ in {1..10}; do
+        kill -0 "$old_pid" 2>/dev/null || break
+        sleep 0.05
+      done
+      if kill -0 "$old_pid" 2>/dev/null; then
+        kill -9 "$old_pid" 2>/dev/null || true
+      fi
+    fi
+    rm -f -- "$pid_file"
+  elif [[ -S "$socket" ]]; then
+    ipc '{"command":["quit"]}' >/dev/null 2>&1 || true
+    sleep 0.1
+  fi
+  rm -f -- "$socket"
+}
+
 launch_url() {
   local url="$1"
   require mpv
-  if [[ -S "$socket" ]]; then
-    ipc '{"command":["quit"]}' >/dev/null || true
-    for _ in {1..20}; do
-      [[ ! -S "$socket" ]] && break
-      sleep 0.05
-    done
-  fi
-  rm -f -- "$socket"
+  kill_old_mpv
   mpv --no-video --force-window=no --input-ipc-server="$socket" \
     --ytdl-format=bestaudio/best --volume=70 --title='YouTube Music' \
     "$url" >/dev/null 2>&1 &
@@ -120,9 +135,7 @@ case "${1:-}" in
     ipc "{\"command\":[\"set_property\",\"volume\",$value]}" >/dev/null
     ;;
   stop)
-    require socat
-    ipc '{"command":["quit"]}' >/dev/null || true
-    rm -f -- "$socket" "$pid_file"
+    kill_old_mpv
     ;;
   status)
     require jq

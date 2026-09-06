@@ -15,15 +15,12 @@ BarWidget {
   property bool playing: false
   property bool playerRunning: false
   property bool popupOpen: false
+  property bool popoutSwitchClosing: false
   property string scriptPath: Qt.resolvedUrl("bin/youtube-music").toString().replace("file://", "")
   readonly property bool hasTrack: title !== ""
   readonly property color foreground: root.bar ? root.bar.barForeground : "#f7f7f7"
   readonly property color green: "#1ed760"
   readonly property bool opened: popupOpen
-  readonly property int popupX: 10
-  readonly property int popupY: 38
-  readonly property int popupWidth: 400
-  readonly property int popupHeight: 540
 
   implicitWidth: hasTrack ? Style.space(154) : Style.space(30)
   implicitHeight: barSize
@@ -39,13 +36,19 @@ BarWidget {
     })
   }
 
-  function close() {
+  function close(reason) {
     if (popupPlayerLoader.item && popupPlayerLoader.item.close) popupPlayerLoader.item.close()
     popupOpen = false
   }
 
+  function closeForPopoutSwitch() {
+    popoutSwitchClosing = true
+    close("popoutSwitch")
+    Qt.callLater(function() { popoutSwitchClosing = false })
+  }
+
   function toggle(payloadJson) {
-    if (root.opened) root.close()
+    if (root.opened) root.close("toggle")
     else root.open(payloadJson || "{}")
   }
 
@@ -122,7 +125,7 @@ BarWidget {
         anchors.verticalCenter: parent.verticalCenter
         text: root.title
         color: root.foreground
-        font.family: root.bar.fontFamily
+        font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily
         font.pixelSize: Style.font.caption
         font.bold: true
         elide: Text.ElideRight
@@ -138,7 +141,7 @@ BarWidget {
       Item {
         width: Style.space(20)
         height: parent.height
-        Text { anchors.centerIn: parent; text: "󰒮"; color: root.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.bodySmall }
+        Text { anchors.centerIn: parent; text: "󰒮"; color: root.foreground; font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily; font.pixelSize: Style.font.bodySmall }
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("previous") }
       }
 
@@ -149,7 +152,7 @@ BarWidget {
         color: "transparent"
         border.width: 0
         anchors.verticalCenter: parent.verticalCenter
-        Text { anchors.centerIn: parent; text: root.playing ? "󰏤" : "󰐊"; color: root.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.bodySmall }
+        Text { anchors.centerIn: parent; text: root.playing ? "󰏤" : "󰐊"; color: root.foreground; font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily; font.pixelSize: Style.font.bodySmall }
         MouseArea {
           anchors.fill: parent
           cursorShape: Qt.PointingHandCursor
@@ -163,90 +166,32 @@ BarWidget {
       Item {
         width: Style.space(20)
         height: parent.height
-        Text { anchors.centerIn: parent; text: "󰒭"; color: root.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.bodySmall }
+        Text { anchors.centerIn: parent; text: "󰒭"; color: root.foreground; font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily; font.pixelSize: Style.font.bodySmall }
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("next") }
       }
 
     }
   }
 
-  FloatingWindow {
-    id: playerWindow
-    title: "YouTube Music Player"
-    visible: root.popupOpen
-    color: "#121212"
-    implicitWidth: root.popupWidth
-    implicitHeight: root.popupHeight
-    minimumSize: Qt.size(implicitWidth, implicitHeight)
-    maximumSize: Qt.size(implicitWidth, implicitHeight)
-
-    onBackingWindowVisibleChanged: {
-      if (!backingWindowVisible || !root.popupOpen) return
-      Qt.callLater(function() {
-        if (popupPlayerLoader.item && popupPlayerLoader.item.open) popupPlayerLoader.item.open("{}")
-      })
-    }
-
-    onClosed: {
-      if (root.popupOpen) root.close()
-    }
+  KeyboardPanel {
+    id: playerPopup
+    anchorItem: root
+    bar: root.bar
+    owner: root
+    open: root.popupOpen
+    contentWidth: playerPopup.fittedContentWidth(Style.space(400))
+    contentHeight: playerPopup.cappedContentHeight(Style.space(540))
+    padding: 0
+    margin: Style.gapsOut
+    focusTarget: popupPlayerLoader.item ? popupPlayerLoader.item.searchInput : null
 
     Loader {
       id: popupPlayerLoader
       anchors.fill: parent
       active: true
       source: Qt.resolvedUrl("Player.qml")
-      onLoaded: item.closeCallback = function() { root.close() }
-    }
-  }
-
-  Variants {
-    model: root.popupOpen ? Quickshell.screens : []
-
-    delegate: Component {
-      PanelWindow {
-        id: dismissWindow
-        required property var modelData
-
-        readonly property bool containsPlayer: playerWindow.screen
-          && modelData.name === playerWindow.screen.name
-
-        screen: modelData
-        visible: root.popupOpen
-        color: "transparent"
-        exclusionMode: ExclusionMode.Ignore
-
-        WlrLayershell.namespace: "youtube-music-dismiss"
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-
-        anchors {
-          top: true
-          bottom: true
-          left: true
-          right: true
-        }
-
-        // Keep the real player window interactive while catching every click
-        // outside it. The small inset includes the compositor-owned border.
-        mask: Region {
-          width: dismissWindow.screen ? dismissWindow.screen.width : 0
-          height: dismissWindow.screen ? dismissWindow.screen.height : 0
-
-          Region {
-            x: root.popupX - 2
-            y: root.popupY - 2
-            width: dismissWindow.containsPlayer ? root.popupWidth + 4 : 0
-            height: dismissWindow.containsPlayer ? root.popupHeight + 4 : 0
-            intersection: Intersection.Subtract
-          }
-        }
-
-        MouseArea {
-          anchors.fill: parent
-          acceptedButtons: Qt.AllButtons
-          onPressed: root.close()
-        }
+      onLoaded: {
+        item.closeCallback = function() { root.close("closeCallback") }
       }
     }
   }
@@ -275,6 +220,9 @@ BarWidget {
   IpcHandler {
     target: root.moduleName
 
+    function open(): void { root.open("{}") }
+    function close(): void { root.close("ipc") }
+    function toggle(): void { root.toggle("{}") }
     function toggleSearch(): void {
       if (root.popupOpen && popupPlayerLoader.item)
         popupPlayerLoader.item.toggleSearch()
