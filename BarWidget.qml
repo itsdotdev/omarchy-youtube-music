@@ -1,7 +1,6 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 
@@ -19,7 +18,7 @@ BarWidget {
   property string scriptPath: Qt.resolvedUrl("bin/youtube-music").toString().replace("file://", "")
   readonly property bool hasTrack: title !== ""
   readonly property color foreground: root.bar ? root.bar.barForeground : "#f7f7f7"
-  readonly property color green: "#1ed760"
+  readonly property color accent: Color.accent
   readonly property bool opened: popupOpen
 
   implicitWidth: hasTrack ? Style.space(154) : Style.space(30)
@@ -195,6 +194,7 @@ BarWidget {
       }
     }
   }
+
 
   Process {
     id: actionProc
