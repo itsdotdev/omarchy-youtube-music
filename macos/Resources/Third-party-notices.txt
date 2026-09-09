@@ -1,4 +1,4 @@
-YouTube Music for macOS
+Motif for macOS
 Based on https://github.com/itsdotdev/omarchy-youtube-music (MIT).
 The original license is included in this bundle as LICENSE.
 

@@ -1,11 +1,22 @@
-# YouTube Music for macOS
+# Motif for macOS
 
 A compact native menu-bar player adapted from the Omarchy plugin. The menu bar
 shows one custom wave icon. Click it to open the 340 × 460 player; hover for track details.
 
+## Install and launch
+
+```sh
+./macos/build.sh
+./macos/install.sh --open-at-login
+```
+
+The installer puts Motif in `/Applications/Motif.app`. Launch it from Applications or Spotlight. Right-click the menu-bar icon and toggle **Open at Login** at any time. Startup registration uses macOS Service Management and is also visible in System Settings → General → Login Items. If macOS requests approval, use **Allow in System Settings…** in the same menu.
+
+Omit `--open-at-login` to install without changing startup preferences. Launching at login keeps the popup closed and the saved queue paused. Opening Motif normally shows the player.
+
 ## Run
 
-Open `YouTube Music.app`. It stays in the menu bar and keeps playing when the
+Open `Motif.app`. It stays in the menu bar and keeps playing when the
 popup closes. Right-click its icon for the player menu and Quit.
 
 Click the search icon at the top right or press Command-K to expand the search
@@ -37,7 +48,7 @@ Homebrew, mpv, jq, and socat are not required for the Mac app.
 
 ```sh
 ./macos/build.sh
-open "macos/dist/YouTube Music.app"
+open "macos/dist/Motif.app"
 ```
 
 The build downloads pinned official yt-dlp and Deno releases, verifies their
@@ -94,8 +105,12 @@ executed from a user-supplied search string, and external tools receive argument
 directly rather than through a shell.
 
 The Mac app stores its queue and volume in the standard UserDefaults domain
-`io.github.itsdotdev.youtube-music.macos`. It stores no Google credentials or
+`io.github.itsdotdev.motif`. It stores no Google credentials or
 stream URLs. Third-party notices are included in the app's Resources folder.
 
 The custom app and menu-bar artwork and its generation prompts are saved in
 `Resources/`. The player has no three-dot menu; use the menu-bar icon's right-click menu.
+
+On the first Motif launch, the app copies the prior YouTube Music queue and volume without overwriting existing Motif preferences.
+
+For installation verification, `"/Applications/Motif.app/Contents/MacOS/Motif" --login-item-status` prints the current macOS login-item registration state.

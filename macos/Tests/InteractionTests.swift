@@ -32,6 +32,8 @@ final class InteractionClient: MusicClient {
         precondition(controller.searchField.superview!.frame.maxX == 326)
         precondition(controller.searchField.superview!.frame.width == 200)
         precondition(controller.searchField.frame.width > 100, "Search text must expand inside the capsule")
+        let magnifier = controller.searchField.superview!.subviews.first { $0 is NSButton }!
+        precondition(magnifier.frame.maxX == 200, "The magnifier must stay at the trailing edge")
         controller.toggleSearch()
         precondition(!controller.searchExpanded)
         controller.focusSearch()

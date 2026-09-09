@@ -9,3 +9,5 @@ xcrun swiftc -swift-version 5 -module-cache-path .build/ModuleCache Sources/Mode
 .build/check-store
 xcrun swiftc -swift-version 5 -module-cache-path .build/ModuleCache Sources/Models.swift Sources/YouTubeClient.swift Sources/PlayerStore.swift Sources/PlayerViewController.swift Tests/InteractionTests.swift -o .build/check-interactions
 .build/check-interactions
+xcrun swiftc -swift-version 5 -module-cache-path .build/ModuleCache Sources/AppPreferences.swift Sources/LoginItemController.swift Tests/AppSettingsTests.swift -o .build/check-settings
+.build/check-settings

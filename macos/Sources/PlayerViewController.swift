@@ -96,16 +96,6 @@ final class TrackCell: NSTableCellView {
     }
 }
 
-final class SearchCapsule: NSView {
-    override func setFrameSize(_ newSize: NSSize) {
-        super.setFrameSize(newSize)
-        for child in subviews {
-            if child is NSTextField { child.frame = NSRect(x: 12, y: 7, width: max(0, newSize.width - 46), height: 18) }
-            else if child is NSButton { child.frame = NSRect(x: newSize.width - 30, y: 0, width: 30, height: 30) }
-        }
-    }
-}
-
 final class PlayerBackground: NSView {
     var clicked: (() -> Void)?
     override var acceptsFirstResponder: Bool { true }
@@ -135,7 +125,7 @@ final class PlayerRow: NSTableRowView {
 final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
     let store: PlayerStore
     let searchField = NSTextField()
-    private let searchPill = SearchCapsule()
+    private let searchPill = NSView()
     private var headerVisibleState: Bool?
     let table = NSTableView()
     let scroll = NSScrollView()
@@ -148,7 +138,7 @@ final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTab
     let heading = label("Up next", size: 12, weight: .semibold)
     let empty = label("Search for something worth hearing", size: 12, color: .secondaryLabelColor)
     let progress = NSSlider(value: 0, minValue: 0, maxValue: 1, target: nil, action: nil)
-    private let name = label("YouTube Music", size: 12, weight: .semibold)
+    private let name = label("Motif", size: 12, weight: .semibold)
     private let rule = NSBox()
     var play: NSButton!
     private var searchButton: NSButton!
@@ -185,11 +175,15 @@ final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTab
         searchField.delegate = self
         searchField.target = self; searchField.action = #selector(search)
         searchField.setAccessibilityLabel("Search music")
-        searchField.frame = NSRect(x: 12, y: 7, width: 0, height: 18)
+        // Keep the text field at its final width; the animated capsule clips it.
+        // Frame animation can bypass NSView.setFrameSize, so child layout must
+        // not depend on that override being called.
+        searchField.frame = NSRect(x: 12, y: 7, width: 154, height: 18)
         searchField.alphaValue = 0
         searchPill.addSubview(searchField)
         searchButton = iconButton("magnifyingglass", "Search music, Command-K", target: self, action: #selector(searchClicked))
         searchButton.frame = NSRect(x: 0, y: 0, width: 30, height: 30)
+        searchButton.autoresizingMask = .minXMargin
         searchPill.addSubview(searchButton)
 
         // Same vertical sequence as the plugin, scaled to the compact popup.
