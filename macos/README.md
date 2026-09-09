@@ -1,7 +1,7 @@
 # YouTube Music for macOS
 
 A compact native menu-bar player adapted from the Omarchy plugin. The menu bar
-shows one custom record/play icon. Click it to open the 340 × 460 player; hover for track details.
+shows one custom wave icon. Click it to open the 340 × 460 player; hover for track details.
 
 ## Run
 

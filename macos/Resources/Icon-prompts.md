@@ -1,19 +1,24 @@
 # Custom icon assets
 
-Created with the built-in image generation tool. The template PNG retains its
-transparent background and cutouts. macOS tints it for the current menu bar.
-The app icon is a matching generated variant. The build only converts sizes
-and packages the generated artwork into an ICNS file.
+Created with the built-in image generation tool from the user's selected concept 03: the rounded wave m.
 
-- `MenuBarIcon.png`: transparent monochrome record/play mark.
-- `AppIcon.png`: ivory mark with a coral groove on a graphite rounded tile.
+- `MenuBarIcon.png`: transparent black wave mark. macOS tints this template for the menu bar appearance.
+- `AppIcon.png`: matching black mark on a flat pale-blue rounded tile.
+
+The build converts image sizes and packages the app artwork into an ICNS file.
 
 ## Menu-bar prompt
 
-Use case: logo-brand. Create one original, polished monochrome icon for a compact native macOS music player. It will be used as a 16–18 point menu-bar template icon. A bold simple circular record-like mark with a right-facing triangular play cutout, subtly distinctive through a single short curved groove cutout toward the upper left. Strong silhouette, thick rounded geometry, generous negative spaces, clean balanced optical centering, no tiny detail. Pure opaque black mark on a genuinely transparent background, including transparent cutouts. The mark should occupy 85% of a square image. Flat vector-like raster artwork, crisp edges. One symbol only. No text, letters, badge, surrounding app tile, shadows, gradients, mockup, watermark, or rendered checkerboard. Must remain readable when reduced to 18 pixels.
+Use case: background-extraction and identity-preserve.
+Input: a 4x4 comparison board. The user selected ONLY option 03, in ROW 1 COLUMN 3.
+Extract and faithfully reproduce JUST that chosen rounded wave lowercase-m symbol as a standalone production macOS menu-bar image.
+Preserve its exact flowing asymmetric outline: a short rounded left end rises diagonally to a tall rounded first peak, dips into a steep narrow central valley, rises into the second rounded hump, then curls into a short rightward tail with a round end. It is one continuous thick shape, wider than it is tall. Match the symbol's original proportions and shape very closely.
+Pure opaque black foreground with crisp smooth antialiased edges, flat uniform fill, on a genuinely TRANSPARENT background. Remove ALL blue background, all gridlines, all numbers, all other symbols. No shadow, no gradient, no texture, no outline, no glow.
+Center the single mark on a square canvas with its width occupying 90% of the canvas. Vertical whitespace is transparent, not filled. One symbol only. Do not reinterpret or redesign it.
 
 ## App-icon prompt
 
-Edit target: MenuBarIcon.png.
-
-Use case: logo-brand. Edit this transparent black music-player mark into a matching macOS application icon. Preserve the exact silhouette of the provided circular record/play mark and its cutouts, but make the mark warm ivory. Center it at 62 percent of the width on a smooth near-black graphite macOS rounded-square tile, with a subtle deep coral accent along one curved groove. Flat, restrained premium desktop-app icon, no text, no lettering, no watermark, no extra symbols. A very subtle edge highlight on the graphite tile is okay; no perspective or mockup. Transparent outside the rounded-square tile. Produce one square app icon.
+Use case: identity-preserve.
+Edit target: the supplied transparent black wave-m symbol. It is the user's selected identity; preserve that exact silhouette and its proportions.
+Create its matching macOS app icon: center the same pure black wave-m mark on a simple pale sky-blue rounded-square tile (#D6EAF4). The mark occupies 68% of the tile's width. Keep the design flat, clean, and restrained, with a completely uniform opaque blue tile and sharp smooth edges. Transparent outside the rounded square only. Square canvas with tile occupying 92% of width and height.
+No other symbols, no text, no numbers, no grid, no gradients, no shadows, no bevels, no gloss, no 3D, no perspective, no mockup. One app icon only. Preserve the rounded asymmetric double-hump wave-m shape exactly.
