@@ -36,18 +36,9 @@ is_our_mpv() {
   { tr '\0' ' ' <"/proc/$pid/cmdline" | grep -qF -- "$socket"; } 2>/dev/null
 }
 
-launch_url() {
-  local url="$1" old_pid=""
-  require mpv
-
-  # The lock is required: the bar widget and the player fire this script as
-  # separate processes, and without serialising them both read the same mpv.pid
-  # BEFORE either writes its own -- so both kill the old mpv, both start a new
-  # one, and two end up playing at once. With the lock the second caller only
-  # enters after the first has written its pid, and so kills the right process.
-  exec 9>"$runtime_dir/launch.lock"
-  flock 9
-
+# Caller must hold launch.lock so stop and track changes cannot overlap.
+kill_old_mpv() {
+  local old_pid=""
   [[ -r "$pid_file" ]] && old_pid="$(<"$pid_file")"
 
   if [[ -S "$socket" ]]; then
@@ -73,6 +64,22 @@ launch_url() {
   fi
 
   rm -f -- "$socket"
+  rm -f -- "$pid_file"
+}
+
+launch_url() {
+  local url="$1"
+  require mpv
+
+  # The lock is required: the bar widget and the player fire this script as
+  # separate processes, and without serialising them both read the same mpv.pid
+  # BEFORE either writes its own -- so both kill the old mpv, both start a new
+  # one, and two end up playing at once. With the lock the second caller only
+  # enters after the first has written its pid, and so kills the right process.
+  exec 9>"$runtime_dir/launch.lock"
+  flock 9
+
+  kill_old_mpv
   mpv --no-video --force-window=no --input-ipc-server="$socket" \
     --ytdl-format=bestaudio/best --volume=70 --title='YouTube Music' \
     "$url" >/dev/null 2>&1 &
@@ -248,8 +255,9 @@ case "${1:-}" in
     ;;
   stop)
     require socat
-    ipc '{"command":["quit"]}' >/dev/null || true
-    rm -f -- "$socket" "$pid_file"
+    exec 9>"$runtime_dir/launch.lock"
+    flock 9
+    kill_old_mpv
     ;;
   status)
     require jq

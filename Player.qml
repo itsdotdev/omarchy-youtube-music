@@ -48,11 +48,21 @@ Item {
   property var closeCallback: null
   property string scriptPath: Qt.resolvedUrl("bin/youtube-music").toString().replace("file://", "")
 
+  Keys.onPressed: function(event) {
+    if (event.key === Qt.Key_Escape) {
+      root.requestClose()
+      event.accepted = true
+    }
+  }
+
   function open(payloadJson) {
     opened = true
     errorMessage = ""
-    searchExpanded = searchMode || searchField.text.trim() !== ""
+    searchExpanded = searchMode || searchField.text.trim() !== "" || currentTitle === ""
     refreshStatus()
+    if (searchExpanded) {
+      expandSearch()
+    }
   }
 
   function close() {
@@ -456,6 +466,7 @@ Item {
       id: card
       anchors.fill: parent
       color: root.surface
+      radius: Style.cornerRadius
       clip: true
 
       Image {

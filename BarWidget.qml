@@ -14,15 +14,12 @@ BarWidget {
   property bool playing: false
   property bool playerRunning: false
   property bool popupOpen: false
+  property bool popoutSwitchClosing: false
   property string scriptPath: Qt.resolvedUrl("bin/youtube-music").toString().replace("file://", "")
   readonly property bool hasTrack: title !== ""
   readonly property color foreground: root.bar ? root.bar.barForeground : "#f7f7f7"
   readonly property color accent: Color.accent
   readonly property bool opened: popupOpen
-  readonly property int popupX: 10
-  readonly property int popupY: 38
-  readonly property int popupWidth: 400
-  readonly property int popupHeight: 540
 
   implicitWidth: hasTrack ? Style.space(154) : Style.space(30)
   implicitHeight: barSize
@@ -38,13 +35,19 @@ BarWidget {
     })
   }
 
-  function close() {
+  function close(reason) {
     if (popupPlayerLoader.item && popupPlayerLoader.item.close) popupPlayerLoader.item.close()
     popupOpen = false
   }
 
+  function closeForPopoutSwitch() {
+    popoutSwitchClosing = true
+    close("popoutSwitch")
+    Qt.callLater(function() { popoutSwitchClosing = false })
+  }
+
   function toggle(payloadJson) {
-    if (root.opened) root.close()
+    if (root.opened) root.close("toggle")
     else root.open(payloadJson || "{}")
   }
 
@@ -121,7 +124,7 @@ BarWidget {
         anchors.verticalCenter: parent.verticalCenter
         text: root.title
         color: root.foreground
-        font.family: root.bar.fontFamily
+        font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily
         font.pixelSize: Style.font.caption
         font.bold: true
         elide: Text.ElideRight
@@ -137,7 +140,7 @@ BarWidget {
       Item {
         width: Style.space(20)
         height: parent.height
-        Text { anchors.centerIn: parent; text: "󰒮"; color: root.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.bodySmall }
+        Text { anchors.centerIn: parent; text: "󰒮"; color: root.foreground; font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily; font.pixelSize: Style.font.bodySmall }
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("previous") }
       }
 
@@ -148,7 +151,7 @@ BarWidget {
         color: "transparent"
         border.width: 0
         anchors.verticalCenter: parent.verticalCenter
-        Text { anchors.centerIn: parent; text: root.playing ? "󰏤" : "󰐊"; color: root.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.bodySmall }
+        Text { anchors.centerIn: parent; text: root.playing ? "󰏤" : "󰐊"; color: root.foreground; font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily; font.pixelSize: Style.font.bodySmall }
         MouseArea {
           anchors.fill: parent
           cursorShape: Qt.PointingHandCursor
@@ -162,57 +165,36 @@ BarWidget {
       Item {
         width: Style.space(20)
         height: parent.height
-        Text { anchors.centerIn: parent; text: "󰒭"; color: root.foreground; font.family: root.bar.fontFamily; font.pixelSize: Style.font.bodySmall }
+        Text { anchors.centerIn: parent; text: "󰒭"; color: root.foreground; font.family: root.bar ? root.bar.fontFamily : Style.font.menuFamily; font.pixelSize: Style.font.bodySmall }
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.runAction("next") }
       }
 
     }
   }
 
-  FloatingWindow {
-    id: playerWindow
-    title: "YouTube Music Player"
-    visible: root.popupOpen
-    color: "#121212"
-    implicitWidth: root.popupWidth
-    implicitHeight: root.popupHeight
-    minimumSize: Qt.size(implicitWidth, implicitHeight)
-    maximumSize: Qt.size(implicitWidth, implicitHeight)
-
-    onBackingWindowVisibleChanged: {
-      if (!backingWindowVisible || !root.popupOpen) return
-      Qt.callLater(function() {
-        if (popupPlayerLoader.item && popupPlayerLoader.item.open) popupPlayerLoader.item.open("{}")
-      })
-    }
-
-    onClosed: {
-      if (root.popupOpen) root.close()
-    }
+  KeyboardPanel {
+    id: playerPopup
+    anchorItem: root
+    bar: root.bar
+    owner: root
+    open: root.popupOpen
+    contentWidth: playerPopup.fittedContentWidth(Style.space(400))
+    contentHeight: playerPopup.cappedContentHeight(Style.space(540))
+    padding: 0
+    margin: Style.gapsOut
+    focusTarget: popupPlayerLoader.item ? popupPlayerLoader.item.searchInput : null
 
     Loader {
       id: popupPlayerLoader
       anchors.fill: parent
       active: true
       source: Qt.resolvedUrl("Player.qml")
-      onLoaded: item.closeCallback = function() { root.close() }
+      onLoaded: {
+        item.closeCallback = function() { root.close("closeCallback") }
+      }
     }
   }
 
-  // The click-away overlay (a full-screen Overlay-layer PanelWindow that closed
-  // the player on any click outside it) used to live here. Its cut-out was at a
-  // FIXED popupX,popupY -- the geometry of a dropdown anchored to the bar. The
-  // player itself is a real FloatingWindow, so on a floating-window setup
-  // (Hyprland with hyprbars, everything floating) two things break: dragging the
-  // window moves it out from under the hole, and the 30px title bar sits above
-  // the cut-out from the start. In both cases the click is swallowed by the
-  // overlay, which closes the player -- it reads as "the plugin closes itself".
-  //
-  // The player closes with Escape, with the title-bar button
-  // (FloatingWindow.onClosed), or with the bar icon (toggle).
-  //
-  // The Quickshell.Wayland import went with it: only the overlay used
-  // WlrLayershell.
 
   Process {
     id: actionProc
@@ -238,6 +220,9 @@ BarWidget {
   IpcHandler {
     target: root.moduleName
 
+    function open(): void { root.open("{}") }
+    function close(): void { root.close("ipc") }
+    function toggle(): void { root.toggle("{}") }
     function toggleSearch(): void {
       if (root.popupOpen && popupPlayerLoader.item)
         popupPlayerLoader.item.toggleSearch()
