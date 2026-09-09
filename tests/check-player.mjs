@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 const source = fs.readFileSync(new URL('../Player.qml', import.meta.url), 'utf8');
-function block(marker) {
-  const from = source.indexOf(marker);
+function block(marker, offset = 0) {
+  const from = source.indexOf(marker, offset);
   assert.ok(from >= 0, marker);
   const start = source.indexOf('{', from);
   let depth = 1, end = start + 1;
@@ -23,12 +23,6 @@ const mix = {code: 0, pending: '', seed: 'abcdefghijk', collected: 'old mix', ro
   searchMode: true, searching: true, currentVideoId: 'abcdefghijk',
   applyMix: () => {applied = true;}
 }};
-const mixSection = source.slice(source.indexOf('id: mixProc'));
-const marker = mixSection.match(/onExited: function\(code\)/)[0];
-// Extract from the specific process because searchProc uses the same signature.
-const mixStart = source.indexOf('id: mixProc');
-const bodyStart = source.indexOf('onExited: function(code)', mixStart);
-const uniqueMarker = source.slice(mixStart, bodyStart) + marker;
-vm.runInNewContext(`(function(code) {${block(uniqueMarker)}})(code)`, mix);
+vm.runInNewContext(`(function(code) {${block('onExited: function(code)', source.indexOf('id: mixProc'))}})(code)`, mix);
 assert.equal(applied, false);
 console.log('PASS: mix/search isolation and stale mix rejection');
