@@ -180,20 +180,20 @@ Item {
   // returns the seed as the first item, so playAt(0) keeps playing what the user
   // picked and queues the rest behind it.
   function startMix(videoId) {
-    if (!isVideoId(videoId) || mixLoading) return
-    searchDebounce.stop()
-    searchProc.mode = "mix"
-    searchProc.activeQuery = ""
-    searchProc.pendingQuery = ""
-    searchMode = false
-    searching = true
-    mixLoading = true
-    errorMessage = ""
-    results.clear()
-    selectedIndex = 0
-    collapseSearch()
-    searchProc.command = ["bash", scriptPath, "mix", videoId]
-    searchProc.running = true
+    if (!isVideoId(videoId)) return
+    // Use the dedicated mix process so an in-flight search cannot be mistaken
+    // for a mix result. Start the seed now and replace only its upcoming queue.
+    for (var i = 0; i < results.count; i++) {
+      if (results.get(i).videoId !== videoId) continue
+      playAt(i)
+      prefetchMix(videoId)
+      return
+    }
+    if (currentVideoId === videoId) {
+      searchMode = false
+      collapseSearch()
+      prefetchMix(videoId)
+    }
   }
 
   // The single entry point for "the user picked this row". Picking a SEARCH
@@ -256,7 +256,7 @@ Item {
     selectedIndex = seedAt
     // `requeue`, not `queue`: the latter relaunches mpv, which would cut the
     // audio of the track the user chose seconds ago.
-    requeueProc.command = ["bash", scriptPath, "requeue", queueJson(), String(seedAt)]
+    requeueProc.command = ["bash", scriptPath, "requeue", queueJson(), String(seedAt), seed]
     requeueProc.running = true
   }
 
@@ -293,8 +293,9 @@ Item {
     searchDebounce.stop()
     searchMode = false
     collapseSearch()
-    actionProc.command = ["bash", scriptPath, "queue", queueJson(), String(index)]
-    actionProc.running = true
+    var command = ["bash", scriptPath, "queue", queueJson(), String(index)]
+    if (actionProc.running) actionProc.pendingCommand = command
+    else { actionProc.command = command; actionProc.running = true }
   }
 
   function runAction(action) {
@@ -381,6 +382,7 @@ Item {
         else errorMessage = searchError.text.trim() || "No mix for this track"
         return
       }
+      if (!root.searchMode) { searching = false; return }
       var currentQuery = searchField.text.trim()
       if (pendingQuery && pendingQuery !== activeQuery) {
         root.startSearch(pendingQuery)
@@ -404,7 +406,14 @@ Item {
 
   Process {
     id: actionProc
-    onExited: refreshStatus()
+    property var pendingCommand: null
+    onExited: {
+      if (pendingCommand) {
+        command = pendingCommand
+        pendingCommand = null
+        running = true
+      } else refreshStatus()
+    }
   }
 
   Process {
@@ -422,7 +431,7 @@ Item {
       // If the user already changed track while yt-dlp was resolving, the mix
       // arrived late and is no longer valid: swapping the queue now would pull
       // the rug from under what they just chose.
-      if (code !== 0 || root.currentVideoId !== seed) return
+      if (code !== 0 || root.searchMode || root.searching || root.currentVideoId !== seed) return
       root.applyMix(collected, seed)
     }
   }

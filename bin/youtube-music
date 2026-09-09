@@ -71,22 +71,13 @@ launch_url() {
   local url="$1"
   require mpv
 
-  # The lock is required: the bar widget and the player fire this script as
-  # separate processes, and without serialising them both read the same mpv.pid
-  # BEFORE either writes its own -- so both kill the old mpv, both start a new
-  # one, and two end up playing at once. With the lock the second caller only
-  # enters after the first has written its pid, and so kills the right process.
-  exec 9>"$runtime_dir/launch.lock"
-  flock 9
-
   kill_old_mpv
   mpv --no-video --force-window=no --input-ipc-server="$socket" \
     --ytdl-format=bestaudio/best --volume=70 --title='YouTube Music' \
-    "$url" >/dev/null 2>&1 &
+    "$url" 9>&- >/dev/null 2>&1 &
   mpv_pid=$!
   printf '%s\n' "$mpv_pid" >"$pid_file"
   watch_track "$mpv_pid"
-  flock -u 9
 }
 
 # End-of-track watcher. Without it the queue never advances on its own: mpv
@@ -106,15 +97,14 @@ watch_track() {
     # Claim the advance under the lock: if the pid file is no longer ours, the
     # user changed track (another launch, or `stop`) -- this is not an
     # end-of-song, and there is nothing to advance.
-    exec 8>"$runtime_dir/launch.lock"
-    flock 8
+    exec 9>"$runtime_dir/launch.lock"
+    flock 9
     current=""
     [[ -r "$pid_file" ]] && current="$(<"$pid_file")"
     if [[ "$current" != "$mpv_pid" ]]; then
       exit 0
     fi
     rm -f -- "$pid_file"
-    flock -u 8
 
     # A quick death is not an end-of-song, it is a track that never played
     # (yt-dlp could not resolve it, video removed, region locked). Skip it
@@ -137,7 +127,7 @@ watch_track() {
     count="$(jq 'length' "$queue_file" 2>/dev/null || printf 0)"
     index="$(jq -r '.index // -1' "$state_file" 2>/dev/null || printf -- -1)"
     if (( count > 0 )) && (( index >= 0 )) && (( index + 1 < count )); then
-      exec bash "$0" next
+      start_index "$((index + 1))"
     fi
   ) >/dev/null 2>&1 &
 }
@@ -156,6 +146,24 @@ start_index() {
   mv -- "$state_tmp" "$state_file"
   launch_url "https://www.youtube.com/watch?v=$video_id"
 }
+
+# Serialize the complete state change, not just the mpv launch. The bar and
+# popup are separate callers. Shared locks keep status snapshots consistent.
+case "${1:-}" in
+  queue|requeue|play|next|previous|stop)
+    require flock
+    exec 9>"$runtime_dir/launch.lock"
+    flock 9
+    ;;
+  status)
+    require flock
+    exec 9>"$runtime_dir/launch.lock"
+    flock -s 9
+    ;;
+esac
+case "${1:-}" in
+  queue|play|next|previous|stop) rm -f -- "$fail_file" ;;
+esac
 
 case "${1:-}" in
   search)
@@ -197,6 +205,13 @@ case "${1:-}" in
     queue_json="${2:-[]}"
     index="${3:-0}"
     [[ "$index" =~ ^[0-9]+$ ]] || exit 2
+    # A mix may finish after the user changes track. Check its seed while
+    # holding the same lock as queue replacement and playback changes.
+    expected_seed="${4:-}"
+    if [[ -n "$expected_seed" ]]; then
+      current_seed="$(jq -r '.videoId // ""' "$state_file" 2>/dev/null || true)"
+      [[ "$current_seed" == "$expected_seed" ]] || exit 0
+    fi
     queue_tmp="$runtime_dir/queue.json.tmp"
     jq -ce 'if type == "array" then . else error("queue must be an array") end' <<<"$queue_json" >"$queue_tmp"
     mv -- "$queue_tmp" "$queue_file"
@@ -255,8 +270,6 @@ case "${1:-}" in
     ;;
   stop)
     require socat
-    exec 9>"$runtime_dir/launch.lock"
-    flock 9
     kill_old_mpv
     ;;
   status)
