@@ -10,3 +10,9 @@ jobs:
       - run: bash -n bin/youtube-music bin/cmd-k
       - run: python3 -m unittest discover -s tests -v
       - run: node tests/check-player.mjs
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./macos/check.sh
+      - run: xcrun swiftc -swift-version 5 -O macos/Sources/*.swift -o /tmp/YouTubeMusic

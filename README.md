@@ -6,6 +6,11 @@ result queue from a native Omarchy overlay.
 
 ![YouTube Music player](preview.png)
 
+## macOS
+
+A native, compact macOS menu-bar version is available in [`macos/`](macos/README.md).
+Build it with `./macos/build.sh`. The Omarchy plugin and its installation remain separate.
+
 ## Features
 
 - YouTube song, artist, and album search
