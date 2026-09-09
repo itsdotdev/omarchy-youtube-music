@@ -1,14 +1,15 @@
 # YouTube Music for macOS
 
 A compact native menu-bar player adapted from the Omarchy plugin. The menu bar
-shows one icon. Click it to open the 340 × 460 player; hover for track details.
+shows one custom record/play icon. Click it to open the 340 × 460 player; hover for track details.
 
 ## Run
 
 Open `YouTube Music.app`. It stays in the menu bar and keeps playing when the
 popup closes. Right-click its icon for the player menu and Quit.
 
-Click the search icon or press Command-K to reveal search in the header. Search
+Click the search icon at the top right or press Command-K to expand the search
+capsule leftward within the header. The magnifier stays at its right edge. Search
 runs after a short pause while typing. Results fill the player, as in the
 Omarchy plugin. Click a result once or select it and press Return to play.
 Choosing a result collapses search and returns to centered artwork, transport
@@ -95,3 +96,6 @@ directly rather than through a shell.
 The Mac app stores its queue and volume in the standard UserDefaults domain
 `io.github.itsdotdev.youtube-music.macos`. It stores no Google credentials or
 stream URLs. Third-party notices are included in the app's Resources folder.
+
+The custom app and menu-bar artwork and its generation prompts are saved in
+`Resources/`. The player has no three-dot menu; use the menu-bar icon's right-click menu.

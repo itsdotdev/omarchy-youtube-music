@@ -96,6 +96,16 @@ final class TrackCell: NSTableCellView {
     }
 }
 
+final class SearchCapsule: NSView {
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        for child in subviews {
+            if child is NSTextField { child.frame = NSRect(x: 12, y: 7, width: max(0, newSize.width - 46), height: 18) }
+            else if child is NSButton { child.frame = NSRect(x: newSize.width - 30, y: 0, width: 30, height: 30) }
+        }
+    }
+}
+
 final class PlayerBackground: NSView {
     var clicked: (() -> Void)?
     override var acceptsFirstResponder: Bool { true }
@@ -122,9 +132,11 @@ final class PlayerRow: NSTableRowView {
     }
 }
 
-final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate, NSSearchFieldDelegate {
+final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDelegate {
     let store: PlayerStore
-    let searchField = NSSearchField()
+    let searchField = NSTextField()
+    private let searchPill = SearchCapsule()
+    private var headerVisibleState: Bool?
     let table = NSTableView()
     let scroll = NSScrollView()
     let artwork = ArtworkView(frame: .zero)
@@ -161,16 +173,24 @@ final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTab
         preferredContentSize = view.frame.size
 
         place(name, x: 14, y: 425, w: 230, h: 22)
-        searchButton = iconButton("magnifyingglass", "Search music, Command-K", target: self, action: #selector(searchClicked))
-        place(searchButton, x: 296, y: 421, w: 30, h: 30)
+        searchPill.wantsLayer = true
+        searchPill.layer?.cornerRadius = 15
+        searchPill.layer?.masksToBounds = true
+        place(searchPill, x: 296, y: 421, w: 30, h: 30)
         searchField.placeholderString = "Search music…"
         searchField.font = .systemFont(ofSize: 12)
+        searchField.isBezeled = false
+        searchField.drawsBackground = false
+        searchField.focusRingType = .none
         searchField.delegate = self
         searchField.target = self; searchField.action = #selector(search)
-        searchField.sendsSearchStringImmediately = false
-        searchField.sendsWholeSearchString = true
-        place(searchField, x: 126, y: 423, w: 200, h: 28)
-        searchField.isHidden = true
+        searchField.setAccessibilityLabel("Search music")
+        searchField.frame = NSRect(x: 12, y: 7, width: 0, height: 18)
+        searchField.alphaValue = 0
+        searchPill.addSubview(searchField)
+        searchButton = iconButton("magnifyingglass", "Search music, Command-K", target: self, action: #selector(searchClicked))
+        searchButton.frame = NSRect(x: 0, y: 0, width: 30, height: 30)
+        searchPill.addSubview(searchButton)
 
         // Same vertical sequence as the plugin, scaled to the compact popup.
         place(artwork, x: 98, y: 270, w: 144, h: 144)
@@ -260,22 +280,38 @@ final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTab
         super.viewDidDisappear()
     }
     func focusSearch() {
-        searchExpanded = true; render()
+        searchExpanded = true; updateSearchHeader(animated: true); render()
         view.window?.makeFirstResponder(searchField)
     }
     func collapseSearch() {
         searchExpanded = false
+        updateSearchHeader(animated: true)
         view.window?.makeFirstResponder(view)
         render()
     }
     func toggleSearch() { searchExpanded ? collapseSearch() : focusSearch() }
 
+    private func updateSearchHeader(animated: Bool) {
+        guard isViewLoaded else { return }
+        let wasExpanded = headerVisibleState
+        headerVisibleState = searchExpanded
+        let width: CGFloat = searchExpanded ? 200 : 30
+        searchField.isEnabled = searchExpanded
+        searchPill.layer?.backgroundColor = (searchExpanded ? NSColor(white: 0.14, alpha: 1) : .clear).cgColor
+        let changes = {
+            self.searchPill.animator().frame = NSRect(x: 326 - width, y: 421, width: width, height: 30)
+            self.name.animator().setFrameSize(NSSize(width: self.searchExpanded ? 102 : 230, height: 22))
+            self.searchField.animator().alphaValue = self.searchExpanded ? 1 : 0
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = animated && wasExpanded != nil ? (self.searchExpanded ? 0.145 : 0.11) : 0
+            changes()
+        }
+    }
     func render() {
         guard isViewLoaded else { return }
         let browsing = store.current == nil || store.showingSearch
-        searchField.isHidden = !searchExpanded
-        searchButton.isHidden = searchExpanded
-        name.frame.size.width = searchExpanded ? 102 : 230
+        if headerVisibleState != searchExpanded { updateSearchHeader(animated: false) }
         for child in playerViews { child.isHidden = browsing }
         scroll.frame = browsing ? NSRect(x: 10, y: 16, width: 320, height: 399) : NSRect(x: 10, y: 16, width: 320, height: 90)
         table.rowHeight = browsing ? 46 : 36
@@ -343,7 +379,10 @@ final class PlayerViewController: NSViewController, NSTableViewDataSource, NSTab
         return false
     }
     @objc private func search() { debounce?.invalidate(); store.search(searchField.stringValue) }
-    @objc private func searchClicked() { focusSearch() }
+    @objc private func searchClicked() {
+        if searchExpanded { view.window?.makeFirstResponder(searchField); if !searchField.stringValue.isEmpty { search() } }
+        else { focusSearch() }
+    }
     @objc private func clickRow() { if table.clickedRow >= 0 { selectRow(table.clickedRow) } }
     func selectRow(_ index: Int) { debounce?.invalidate(); collapseSearch(); store.select(index) }
     @objc func activateRow() { if table.selectedRow >= 0 { selectRow(table.selectedRow) } }

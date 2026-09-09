@@ -25,8 +25,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         guard let button = statusItem.button else { return }
         button.title = ""
-        button.image = NSImage(systemSymbolName: "play.circle", accessibilityDescription: "YouTube Music")
-        button.imagePosition = .imageLeading
+        if let url = Bundle.main.url(forResource: "MenuBarIcon", withExtension: "png"),
+           let icon = NSImage(contentsOf: url) {
+            icon.size = NSSize(width: 18, height: 18)
+            icon.isTemplate = true
+            button.image = icon
+        }
+        button.setAccessibilityLabel("YouTube Music")
+        button.imagePosition = .imageOnly
+        button.imageScaling = .scaleProportionallyDown
         button.target = self; button.action = #selector(statusClicked)
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         store.changed = { [weak self] in self?.refresh() }
@@ -65,7 +72,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem.button else { return }
         button.title = ""
         button.toolTip = store.current.map { "\($0.title) · \($0.artist)" } ?? "YouTube Music"
-        button.image = NSImage(systemSymbolName: store.playing ? "waveform" : "play.circle", accessibilityDescription: "YouTube Music")
     }
 
     private func showMenu(_ anchor: NSView) {
