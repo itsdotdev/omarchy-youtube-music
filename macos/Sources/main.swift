@@ -18,7 +18,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store = PlayerStore()
         controller = PlayerViewController(store: store)
         controller.close = { [weak self] in self?.popover.performClose(nil) }
-        controller.openMenu = { [weak self] anchor in self?.showMenu(anchor) }
         popover.contentViewController = controller
         popover.contentSize = NSSize(width: 340, height: 460)
         popover.behavior = .transient
@@ -80,10 +79,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for (title, action) in entries {
             let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
         }
+        let volumeItem = NSMenuItem()
+        let volumeView = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 34))
+        let volumeLabel = label("Volume", size: 12)
+        volumeLabel.frame = NSRect(x: 14, y: 8, width: 55, height: 18)
+        let slider = NSSlider(value: Double(store.volume * 100), minValue: 0, maxValue: 100, target: self, action: #selector(changeVolume(_:)))
+        slider.frame = NSRect(x: 74, y: 7, width: 110, height: 20)
+        slider.setAccessibilityLabel("Volume")
+        volumeView.addSubview(volumeLabel); volumeView.addSubview(slider)
+        volumeItem.view = volumeView; menu.addItem(volumeItem)
         menu.addItem(.separator())
         menu.addItem(withTitle: "Quit YouTube Music", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: anchor.bounds.height), in: anchor)
     }
+    @objc private func changeVolume(_ sender: NSSlider) { store.volume = sender.floatValue / 100 }
     @objc private func openPlayer() { show() }
     @objc private func focusSearch() { show(); controller.focusSearch() }
     @objc private func toggle() { store.toggle() }
@@ -93,7 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openTrack() { if let url = store.current?.url { NSWorkspace.shared.open(url) } }
     @objc private func about() {
         NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationName: "YouTube Music", .applicationVersion: "1.0",
+            .applicationName: "YouTube Music", .applicationVersion: "1.1",
             .credits: NSAttributedString(string: "A native macOS adaptation of itsdotdev/omarchy-youtube-music.\nPublic YouTube search and mixes. No account required.\nBuilt with yt-dlp and Deno.\nNot affiliated with YouTube or Google.")
         ])
         NSApp.activate(ignoringOtherApps: true)

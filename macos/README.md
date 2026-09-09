@@ -8,13 +8,17 @@ shows one icon. Click it to open the 340 × 460 player; hover for track details.
 Open `YouTube Music.app`. It stays in the menu bar and keeps playing when the
 popup closes. Right-click its icon for the player menu and Quit.
 
-Search for a song, artist, or album, then double-click a result or select it and
-press Return. Choosing a search result starts its mix. The queue advances at
+Click the search icon or press Command-K to reveal search in the header. Search
+runs after a short pause while typing. Results fill the player, as in the
+Omarchy plugin. Click a result once or select it and press Return to play.
+Choosing a result collapses search and returns to centered artwork, transport
+controls, and Up next. Clearing the query returns to the current queue.
+Choosing a search result starts its mix. The queue advances at
 the end of each track and requests more recommendations near the end. YouTube
 can return a finite mix or repeated recommendations, so a station can end.
 
-- Play/pause, previous, next, seek, volume, and per-track mixes.
-- Command-K focuses search. Down moves from search into the result list.
+- Play/pause, previous, next, seek, and per-track mixes. Volume is in the menu-bar icon's right-click menu.
+- Command-K toggles the header search field. Down moves from search into the result list.
 - Arrow keys select a row. Return plays it. Space toggles playback outside text fields.
 - Command-Left and Command-Right change tracks. Escape closes the popup.
 - macOS Now Playing and media-command integration.
@@ -57,7 +61,9 @@ attached during the signing step.
 ```
 
 Checks cover parsing, video ID validation, deduplication, queue boundaries,
-saved-state validation, stale search/mix/stream responses, and repeated failures.
+saved-state validation, stale search/mix/stream responses, repeated failures,
+search toggling, typing debounce, full-height results, one-action selection, and
+clearing search back to the queue.
 GitHub Actions also compiles the app on macOS.
 
 Verified on an Apple silicon Mac running macOS 15.7.9:

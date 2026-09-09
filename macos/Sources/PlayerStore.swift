@@ -73,11 +73,17 @@ final class PlayerStore {
     private func save() {
         if let data = try? JSONEncoder().encode(queue) { defaults.set(data, forKey: "queue") }
     }
-    func search(_ text: String) {
+    // Invalidate results as soon as the user edits, before the debounce fires.
+    func editQuery(_ text: String) {
         query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         searchJob?.cancel(); searchID = UUID()
-        showingSearch = true; results = []; message = ""
-        guard !query.isEmpty else { searching = false; notify(); return }
+        searching = false; results = []; message = ""
+        showingSearch = !query.isEmpty || current == nil
+        notify()
+    }
+    func search(_ text: String) {
+        editQuery(text)
+        guard !query.isEmpty else { return }
         searching = true; notify()
         let id = searchID
         searchJob = client.search(query) { [weak self] response in
@@ -202,8 +208,7 @@ final class PlayerStore {
     }
     func next() { if queue.advance(by: 1, wrap: true) { failures = 0; playCurrent() } }
     func previous() {
-        if position > 3 { seek(0) }
-        else if queue.advance(by: -1, wrap: true) { failures = 0; playCurrent() }
+        if queue.advance(by: -1, wrap: true) { failures = 0; playCurrent() }
     }
     func seek(_ seconds: Double) {
         guard duration > 0 else { return }
